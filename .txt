@@ -1,0 +1,179 @@
+Section I: Database Design:
+
+1) For this requirement, we will be using MongoDB as our NoSQL database. We will create two collections, one for the restaurants and the other for the reviews.
+
+Below are the attributes and data types for each collection:
+
+<code>restaurants</code>
+
+name: String
+address: String
+description: String
+<code>reviews</code>
+
+restaurantId: ObjectId (reference to the restaurant)
+comment: String
+rating: Number
+timestamp: Date
+In MongoDB, we can establish a relationship between the two collections by using the ObjectId of the restaurant as a reference in the review collection. This is known as a one-to-many relationship, where one restaurant can have many reviews.
+
+Therefore, the reviews collection will have a field called restaurantId, which will contain the ObjectId of the corresponding restaurant in the restaurants collection. We can use this to retrieve all the reviews for a particular restaurant by querying the reviews collection based on the restaurantId.
+
+2) To establish a relationship between the two models using Mongoose, we will create two models - Restaurant and Review, and then define the association between them by creating a reference to the Restaurant model in the Review model.
+
+Below is the sample code  for creating the Restaurant and Review models with the association:
+
+models/restaurant.model.js
+
+const { default: mongoose } = require("mongoose");
+
+const restaurantSchema = new mongoose.Schema({
+  name: { type: String, required: [true, "Please add restaurant name"] },
+  address: { type: String, required: [true, "Please add restaurant address"] },
+  description: {
+    type: String,
+    required: [true, "Please add restaurant description"],
+  },
+  reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
+});
+
+const Restaurant = mongoose.model("Restaurant", restaurantSchema);
+module.exports = Restaurant;
+
+
+models/review.model.js
+
+const { default: mongoose } = require("mongoose");
+
+// Review schema
+const reviewSchema = new mongoose.Schema({
+  restaurant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Restaurant",
+    required: true,
+  },
+  author: {
+    type: String,
+    required: [true, "Mention author name"],
+  },
+  rating: {
+    type: Number,
+    min: 1,
+    max: 5,
+    required: [true, "Please provide rating"],
+  },
+  comment: {
+    type: String,
+    required: [true, "Please add comment"],
+  },
+});
+
+const Review = mongoose.model("Review", reviewSchema);
+module.exports = Review;
+//
+
+
+In the Review model, we define the restaurant field as a reference to the Restaurant model using Schema.Types.ObjectId and ref: 'Restaurant'. This establishes a relationship between the two models, where each review document will contain a reference to the corresponding restaurant document in the restaurants collection.
+
+We can use the populate() method to retrieve all the reviews for a particular restaurant by querying the reviews collection based on the restaurantId and populating the restaurant field with the corresponding restaurant document.
+
+
+3) To fetch the data for the admin page, we can use an aggregation query in MongoDB to join the restaurants and reviews collections and group the reviews by restaurant. This will give us the total number of reviews for each restaurant.
+
+The NoSQL query for the above would look something like this:
+
+db.reviews.aggregate([
+  {
+    $group: {
+      _id: "$restaurantId",
+      count: { $sum: 1 }
+    }
+  },
+  {
+    $lookup: {
+      from: "restaurants",
+      localField: "_id",
+      foreignField: "_id",
+      as: "restaurant"
+    }
+  },
+  {
+    $unwind: "$restaurant"
+  },
+  {
+    $project: {
+      _id: 1,
+      name: "$restaurant.name",
+      count: 1
+    }
+  }
+]);
+
+This query first groups the reviews by the restaurantId and calculates the total count of reviews for each restaurant. Then, it performs a lookup to join the reviews with the restaurants collection and retrieves the name of each restaurant. Finally, it projects the relevant fields - _id, name and count - to be displayed in the admin page.
+
+To use Mongoose to fetch the above results, we can define a method in our Restaurant model that uses the aggregate function to perform the above query. Here's the sample code in TypeScript for the Restaurant model:
+
+import mongoose, { Schema, Document } from 'mongoose';
+
+export interface IRestaurant extends Document {
+  name: string;
+  address: string;
+  description: string;
+}
+
+const RestaurantSchema: Schema = new Schema({
+  name: { type: String, required: true },
+  address: { type: String, required: true },
+  description: { type: String, required: true },
+});
+
+RestaurantSchema.statics.getRestaurantReviewsCount = function() {
+  return this.aggregate([
+    {
+      $group: {
+        _id: "$_id",
+        name: { $first: "$name" },
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+};
+
+export default mongoose.model<IRestaurant>('Restaurant', RestaurantSchema);
+
+In this code, we define a static method called getRestaurantReviewsCount that performs the above query using the aggregate function. This method will return an array of objects containing the _id, name and count fields for each restaurant. We can use this method to fetch the data for the admin page.
+
+
+Section II: RESTful API Design
+
+1) Here's a table of the API endpoints that we can create for the given requirements:
+
+HTTP Verb	API Endpoint	         Brief Description
+GET	      /restaurants	             Get all restaurants
+GET	      /restaurants/:id	         Get a specific restaurant by ID
+POST	  /restaurants/:id/reviews	 Add a review for a specific restaurant
+GET	      /restaurants/:id/reviews	 Get all reviews for a specific restaurant
+GET	      /admin/restaurants	     Get a list of all restaurants with their review counts
+GET	      /admin/restaurants/:id	 Get the review count for a specific restaurant
+
+In addition to the above endpoints, we can also create endpoints for updating and deleting restaurants and reviews as per the requirements of the application.
+
+
+Section III: ES6 Basics
+
+Here are the solutions for the given scenarios:
+
+1) To generate an array result1 that contains the first, third, and fifth elements of the array a, we can use the filter method along with the index parameter:
+
+const result1 = a.filter((el, i) => i % 2 === 0);
+
+
+2) To generate an array result2 that contains the squares of the elements of the array a, we can use the map method along with the square operator:
+
+const result2 = a.map(el => el ** 2);
+
+3) To generate an array result3 that contains the squares of the odd elements of the array a, we can use the filter and map methods together:
+
+const result3 = a.filter(el => el % 2 !== 0).map(el => el ** 2);
+
+These solutions will work for any size of array a.
